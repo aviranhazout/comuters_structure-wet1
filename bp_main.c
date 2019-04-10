@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
 		exit(2);
 	}
 
+	//getting and parsing the first line
 	char line[1024];
 	if (fgets(line, 256, trace) == NULL) {
 		fprintf(stderr, "Error in input file: cannot read config\n");
@@ -73,10 +74,11 @@ int main(int argc, char **argv) {
 	}
 
 	if (BP_init(btbSize, historySize, tagSize,fsmState, isGlobalHist,
-			isGlobalTable, Shared) < 0) {
+			isGlobalTable, Shared) < 0) {		//init
 		fprintf(stderr, "Predictor init failed\n");
 		exit(8);
 	}
+	//getting and parsing the first line until here
 
 	while ((fgets(line, 256, trace) != NULL)) {
 		if (line[0] == '\n') {
@@ -101,15 +103,15 @@ int main(int argc, char **argv) {
 		}
 		uint32_t dst = 0;
 		printf("0x%x ", pc);
-		printf("%c ", (BP_predict(pc, &dst)? 'T' : 'N'));
+		printf("%c ", (BP_predict(pc, &dst)? 'T' : 'N'));	//predict
 		printf("0x%x\n", dst);
 
 
-		BP_update(pc, targetPc, taken, dst);
+		BP_update(pc, targetPc, taken, dst);	//update
 	}
 
 	SIM_stats stats;
-	BP_GetStats(&stats);
+	BP_GetStats(&stats);	//stats
 	printf("flush_num: %d, br_num: %d, size: %db\n", stats.flush_num, stats.br_num, stats.size);
 
 	return 0;
