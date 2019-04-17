@@ -4,6 +4,7 @@
 #include "bp_api.h"
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define max_machines 255
 #define max_lines 32
@@ -102,7 +103,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
 			table.lines[i].hist = hist + i;
         table.lines[i].tag = 0;
         table.lines[i].dest = 0;
-		table.lines[i].hist->max = tables_num - 1;
+		table.lines[i].hist->max = tables_num;
 		table.lines[i].hist->current = 0;
 
 		if (isGlobalTable)
@@ -135,13 +136,14 @@ bool BP_predict(uint32_t pc, uint32_t *dst)
         if (table.share == 0)
             machine = history;
         else if (table.share == 1)
-            machine = history^tag;
+            machine = history^(pc_sr2 % (table.lines[place].hist->max));
         else
-            machine = history^(int)(tag / pow(2,14));
+            machine = history^(int)((pc_sr2 % (table.lines[place].hist->max)) / pow(2,14));
+            printf("\n\n%d\n\n",machine);
         if (table.lines[place].states->machines[machine] > 1)
         {   //and if the state is taken
             is_taken = true;
-            *dst = table.lines[place].dest;
+            *dst = 4*(table.lines[place].dest);
             return true;
         }
     }
@@ -169,7 +171,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst)
         if (!(table.isGlobalHist))
             update_hist = false;
     }
-    table.lines[place].dest = targetPc;
+    table.lines[place].dest = targetPc/4;
 
     //first update or clean the state machine
     if (update_table)
@@ -178,9 +180,9 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst)
         if (table.share == 0)
             machine = history;
         else if (table.share == 1)
-            machine = history^tag;
+            machine = history^(pc_sr2 % (table.lines[place].hist->max));
         else
-            machine = history^(int)(tag / pow(2,14));
+            machine = history^(int)((pc_sr2 % (table.lines[place].hist->max)) / pow(2,14));
 
         if (taken)
         {
@@ -214,7 +216,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst)
 
     //updating the stats
     stats.br_num += 1;
-    if ((is_taken && !taken) || (!is_taken && taken) || (is_taken && taken && targetPc != pred_dst)) //flush
+    if ((is_taken != taken) || (is_taken && taken && targetPc != pred_dst)) //flush
         stats.flush_num += 1;
 	return;
 }
